@@ -8,15 +8,14 @@ const flip = (f) =>
     f(y)(x);
 
 //* (a -> b -> c) -> (b -> c)
-const pass = (f) =>
-  (y) =>
-    f(undefined)(y);
+const pass = (f) => f(undefined);
 
 //* (b -> c) -> (a -> b) -> (a -> c)
 const compose = (f) => (g) => 
   (x) =>
     f(g(x));
 
+//* (a -> b) -> (b -> c) -> (a -> c)
 const pipe = flip(compose);
 
 //* Int -> Int -> [a] -> [a]
@@ -25,7 +24,13 @@ const slice = (start) => (finish) => (list) =>
   list.slice(start, finish);
 
 //* Int -> [a] -> [a]
-const sliceFrom = compose(pass, flip)(slice);
+const sliceFrom = compose(pass)(flip)(slice);
+  //:                  compose (pass) (flip) (slice)
+  //:                  pass (flip (slice))
+  //:                  flip (slice) (undefined)
+  //: start =>         flip (slice) (undefined) (start)
+  //: start =>         slice (start) (undefined)
+  //: start => list => slice (start) (undefined) (list)
 
 //* Int -> [a] -> [a]
 const sliceTo = (finish) => 
@@ -79,8 +84,12 @@ const concat = (left) => (right) =>
 
 //* (a -> b) -> [a] -> [b]
 const map = (f) => (list) =>
-  foldr ((x) => flip(concat)(f(x)))
-    //((x) => (accumulator) => concat(accumulator)(f(x)))
+  foldr (compose(flip(concat))(f))
+    //:                         compose (flip (concat)) (f) 
+    //: (x) =>                  compose (flip (concat)) (f) (x) 
+    //: (x) =>                  flip (concat) (f (x)) 
+    //: (x) => (accumulator) => flip (concat) (f (x)) (accumulator) 
+    //: (x) => (accumulator) => concat (accumulator) (f (x)) 
     ([])
     (list);
 
